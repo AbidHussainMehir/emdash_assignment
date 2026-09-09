@@ -679,6 +679,7 @@ export interface CommentBeforeCreateEvent {
 		body: string;
 		ipHash: string | null;
 		userAgent: string | null;
+		mediaId?: string | null;
 	};
 	/** Metadata bag — plugins can attach signals for the moderator */
 	metadata: Record<string, unknown>;
@@ -718,6 +719,7 @@ export interface StoredComment {
 	body: string;
 	status: string;
 	moderationMetadata: Record<string, unknown> | null;
+	mediaId?: string | null;
 	createdAt: string;
 	updatedAt: string;
 }

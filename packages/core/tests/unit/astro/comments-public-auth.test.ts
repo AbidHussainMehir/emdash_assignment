@@ -98,6 +98,28 @@ describe("session auth on the public comments API", () => {
 		expect(locals.user).toBeUndefined();
 	});
 
+	it("sets locals.user when a valid CMS session uploads a comment image", async () => {
+		resolveSessionUser.mockResolvedValue({ id: "user-1" });
+		getUserById.mockResolvedValue({
+			id: "user-1",
+			email: "admin@example.com",
+			disabled: false,
+		});
+		const { context, locals, next } = createContext(
+			"/_emdash/api/comments/posts/post-1/media",
+			"POST",
+		);
+
+		const response = await onRequest(
+			context as Parameters<AuthMiddlewareModule["onRequest"]>[0],
+			next,
+		);
+
+		expect(response.status).toBe(200);
+		expect(next).toHaveBeenCalledOnce();
+		expect(locals.user).toMatchObject({ id: "user-1", email: "admin@example.com" });
+	});
+
 	it.each([
 		["comment list requests", "GET", "/_emdash/api/comments/posts/post-1"],
 		["comment reaction requests", "POST", "/_emdash/api/comments/posts/post-1/reactions"],

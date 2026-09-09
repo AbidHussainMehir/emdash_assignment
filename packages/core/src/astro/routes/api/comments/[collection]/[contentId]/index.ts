@@ -7,19 +7,36 @@
 
 import type { APIRoute } from "astro";
 
-import { apiError, apiSuccess, handleError, requireDb, unwrapResult } from "#api/error.js";
-import { handleCommentList, checkRateLimit, hashIp } from "#api/handlers/comments.js";
+import {
+	apiError,
+	apiSuccess,
+	handleError,
+	requireDb,
+	unwrapResult,
+} from "#api/error.js";
+import {
+	handleCommentList,
+	checkRateLimit,
+	hashIp,
+} from "#api/handlers/comments.js";
 import { isParseError, parseBody } from "#api/parse.js";
 import { createCommentBody } from "#api/schemas.js";
 import { getSiteBaseUrl } from "#api/site-url.js";
 import { sendCommentNotification } from "#comments/notifications.js";
 import { createComment, type CommentHookRunner } from "#comments/service.js";
-import { getTurnstileSecretKey, verifyTurnstileToken } from "#comments/turnstile.js";
+import { validateCommentMediaId } from "#comments/media.js";
+import {
+	getTurnstileSecretKey,
+	verifyTurnstileToken,
+} from "#comments/turnstile.js";
 import { resolveSecretsCached } from "#config/secrets.js";
 import { CommentRepository } from "#db/repositories/comment.js";
 import { validateIdentifier } from "#db/validate.js";
 import { extractRequestMeta } from "#plugins/request-meta.js";
-import type { CollectionCommentSettings, ModerationDecision } from "#plugins/types.js";
+import type {
+	CollectionCommentSettings,
+	ModerationDecision,
+} from "#plugins/types.js";
 
 export const prerender = false;
 
@@ -31,7 +48,11 @@ export const GET: APIRoute = async ({ params, url, locals }) => {
 	const { collection, contentId } = params;
 
 	if (!collection || !contentId) {
-		return apiError("VALIDATION_ERROR", "Collection and content ID required", 400);
+		return apiError(
+			"VALIDATION_ERROR",
+			"Collection and content ID required",
+			400,
+		);
 	}
 
 	const dbErr = requireDb(emdash?.db);
@@ -54,7 +75,11 @@ export const GET: APIRoute = async ({ params, url, locals }) => {
 		}
 
 		if (!collectionRow.comments_enabled) {
-			return apiError("COMMENTS_DISABLED", "Comments are not enabled for this collection", 403);
+			return apiError(
+				"COMMENTS_DISABLED",
+				"Comments are not enabled for this collection",
+				403,
+			);
 		}
 
 		const result = await handleCommentList(emdash.db, collection, contentId, {
@@ -77,7 +102,11 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 	const { collection, contentId } = params;
 
 	if (!collection || !contentId) {
-		return apiError("VALIDATION_ERROR", "Collection and content ID required", 400);
+		return apiError(
+			"VALIDATION_ERROR",
+			"Collection and content ID required",
+			400,
+		);
 	}
 
 	const dbErr = requireDb(emdash?.db);
@@ -105,14 +134,23 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 		}
 
 		if (!collectionRow.comments_enabled) {
-			return apiError("COMMENTS_DISABLED", "Comments are not enabled for this collection", 403);
+			return apiError(
+				"COMMENTS_DISABLED",
+				"Comments are not enabled for this collection",
+				403,
+			);
 		}
 
 		// Verify the content item exists, is published, and not soft-deleted
 		validateIdentifier(collection, "collection");
 		const contentRow = await emdash.db
 			.selectFrom(`ec_${collection}` as never)
-			.select(["id" as never, "slug" as never, "author_id" as never, "published_at" as never])
+			.select([
+				"id" as never,
+				"slug" as never,
+				"author_id" as never,
+				"published_at" as never,
+			])
 			.where("id" as never, "=", contentId as never)
 			.where("status" as never, "=", "published" as never)
 			.where("deleted_at" as never, "is", null as never)
@@ -124,12 +162,19 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 
 		// Check if comments are closed (published_at + closed_after_days)
 		if (collectionRow.comments_closed_after_days > 0) {
-			const publishedAt = (contentRow as { published_at: string | null }).published_at;
+			const publishedAt = (contentRow as { published_at: string | null })
+				.published_at;
 			if (publishedAt) {
 				const closedDate = new Date(publishedAt);
-				closedDate.setDate(closedDate.getDate() + collectionRow.comments_closed_after_days);
+				closedDate.setDate(
+					closedDate.getDate() + collectionRow.comments_closed_after_days,
+				);
 				if (new Date() > closedDate) {
-					return apiError("COMMENTS_CLOSED", "Comments are closed for this content", 403);
+					return apiError(
+						"COMMENTS_CLOSED",
+						"Comments are closed for this content",
+						403,
+					);
 				}
 			}
 		}
@@ -137,7 +182,10 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 		// Anti-spam: Honeypot — hidden field filled only by bots
 		if (body.website_url) {
 			// Silently accept — don't reveal the honeypot to bots
-			return apiSuccess({ status: "pending", message: "Comment submitted for review" });
+			return apiSuccess({
+				status: "pending",
+				message: "Comment submitted for review",
+			});
 		}
 
 		// Anti-spam: Rate limiting
@@ -159,9 +207,17 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 			ipHash = "unknown";
 		}
 		const unknownBucketLimit = ipHash === "unknown" ? 20 : undefined;
-		const rateLimited = await checkRateLimit(emdash.db, ipHash, unknownBucketLimit);
+		const rateLimited = await checkRateLimit(
+			emdash.db,
+			ipHash,
+			unknownBucketLimit,
+		);
 		if (rateLimited) {
-			return apiError("RATE_LIMITED", "Too many comments. Please try again later.", 429);
+			return apiError(
+				"RATE_LIMITED",
+				"Too many comments. Please try again later.",
+				429,
+			);
 		}
 
 		// Anti-spam: Turnstile — enforced only when the operator configured a
@@ -170,7 +226,11 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 		// missing token, failed verification, and siteverify errors all reject.
 		const turnstileSecretKey = getTurnstileSecretKey();
 		if (turnstileSecretKey) {
-			const verified = await verifyTurnstileToken(body.turnstileToken, turnstileSecretKey, meta.ip);
+			const verified = await verifyTurnstileToken(
+				body.turnstileToken,
+				turnstileSecretKey,
+				meta.ip,
+			);
 			if (!verified) {
 				return apiError("TURNSTILE_FAILED", "CAPTCHA verification failed", 403);
 			}
@@ -206,10 +266,24 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 				return apiError("VALIDATION_ERROR", "Parent comment not found", 400);
 			}
 			if (parent.collection !== collection || parent.contentId !== contentId) {
-				return apiError("VALIDATION_ERROR", "Parent comment belongs to different content", 400);
+				return apiError(
+					"VALIDATION_ERROR",
+					"Parent comment belongs to different content",
+					400,
+				);
 			}
 			// Flatten: if parent is a reply, use its parent (the root) instead
 			resolvedParentId = parent.parentId ?? parent.id;
+		}
+
+		let mediaId: string | undefined;
+		if (body.mediaId) {
+			const mediaCheck = await validateCommentMediaId(emdash.db, body.mediaId);
+			if (!mediaCheck.ok) {
+				const status = mediaCheck.code === "PAYLOAD_TOO_LARGE" ? 413 : 400;
+				return apiError(mediaCheck.code, mediaCheck.message, status);
+			}
+			mediaId = body.mediaId;
 		}
 
 		// Wire the comment service to the real hook pipeline
@@ -218,10 +292,20 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 				return emdash.hooks.runCommentBeforeCreate(event);
 			},
 			async runModerate(event) {
-				const result = await emdash.hooks.invokeExclusiveHook("comment:moderate", event);
-				if (!result) return { status: "pending" as const, reason: "No moderator configured" };
+				const result = await emdash.hooks.invokeExclusiveHook(
+					"comment:moderate",
+					event,
+				);
+				if (!result)
+					return {
+						status: "pending" as const,
+						reason: "No moderator configured",
+					};
 				if (result.error) {
-					console.error(`[comments] Moderation error (${result.pluginId}):`, result.error.message);
+					console.error(
+						`[comments] Moderation error (${result.pluginId}):`,
+						result.error.message,
+					);
 					return { status: "pending" as const, reason: "Moderation error" };
 				}
 				return result.result as ModerationDecision;
@@ -254,7 +338,8 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 			slug: string;
 			author_id: string | null;
 		};
-		let contentAuthor: { id: string; name: string | null; email: string } | undefined;
+		let contentAuthor:
+			{ id: string; name: string | null; email: string } | undefined;
 		if (typedContent.author_id) {
 			const authorRow = await emdash.db
 				.selectFrom("users")
@@ -282,6 +367,7 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 				body: body.body,
 				ipHash,
 				userAgent: meta.userAgent,
+				mediaId,
 			},
 			collectionSettings,
 			hookRunner,
@@ -302,7 +388,11 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 		// isolate terminates after the response).
 		if (result.comment.status === "approved" && emdash.email && contentAuthor) {
 			try {
-				const adminBaseUrl = await getSiteBaseUrl(emdash.db, request, emdash.config);
+				const adminBaseUrl = await getSiteBaseUrl(
+					emdash.db,
+					request,
+					emdash.config,
+				);
 				await sendCommentNotification({
 					email: emdash.email,
 					comment: result.comment,
@@ -310,7 +400,10 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 					adminBaseUrl,
 				});
 			} catch (err) {
-				console.error("[comments] notification error:", err instanceof Error ? err.message : err);
+				console.error(
+					"[comments] notification error:",
+					err instanceof Error ? err.message : err,
+				);
 			}
 		}
 
@@ -326,6 +419,10 @@ export const POST: APIRoute = async ({ params, request, locals }) => {
 			201,
 		);
 	} catch (error) {
-		return handleError(error, "Failed to submit comment", "COMMENT_CREATE_ERROR");
+		return handleError(
+			error,
+			"Failed to submit comment",
+			"COMMENT_CREATE_ERROR",
+		);
 	}
 };

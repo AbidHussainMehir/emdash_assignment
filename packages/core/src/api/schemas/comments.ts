@@ -9,7 +9,8 @@ export const createCommentBody = z
 		authorName: z.string().min(1).max(100),
 		authorEmail: z.string().email(),
 		body: z.string().min(1).max(5000),
-		parentId: z.string().optional(),
+		/** One JPEG/PNG/WebP image previously uploaded via the comment media endpoint */
+		mediaId: z.string().min(1).optional(),
 		/** Honeypot field — hidden in the form, filled only by bots */
 		website_url: z.string().optional(),
 		/**
@@ -60,6 +61,16 @@ export const commentListQuery = z
 
 const commentStatusValues = z.enum(["pending", "approved", "spam", "trash"]);
 
+const commentMediaSchema = z
+	.object({
+		id: z.string(),
+		url: z.string(),
+		width: z.number().nullable().optional(),
+		height: z.number().nullable().optional(),
+		alt: z.string().nullable().optional(),
+	})
+	.meta({ id: "CommentMedia" });
+
 /**
  * Public-facing comment (no email/IP).
  *
@@ -75,6 +86,7 @@ export const publicCommentSchema: z.ZodObject<{
 	parentId: z.ZodNullable<z.ZodString>;
 	createdAt: z.ZodString;
 	replies: z.ZodOptional<z.ZodArray<z.ZodAny>>;
+	media: z.ZodOptional<typeof commentMediaSchema>;
 }> = z
 	.object({
 		id: z.string(),
@@ -84,6 +96,7 @@ export const publicCommentSchema: z.ZodObject<{
 		parentId: z.string().nullable(),
 		createdAt: z.string(),
 		replies: z.array(z.any()).optional(),
+		media: commentMediaSchema.optional(),
 	})
 	.meta({ id: "PublicComment" });
 
@@ -101,6 +114,8 @@ export const commentSchema = z
 		ipHash: z.string().nullable(),
 		createdAt: z.string(),
 		updatedAt: z.string(),
+		mediaId: z.string().nullable().optional(),
+		media: commentMediaSchema.optional(),
 	})
 	.meta({ id: "Comment" });
 
@@ -131,3 +146,10 @@ export const commentCountsResponseSchema = z
 export const commentBulkResponseSchema = z
 	.object({ affected: z.number().int() })
 	.meta({ id: "CommentBulkResponse" });
+
+export const commentMediaUploadResponseSchema = z
+	.object({
+		mediaId: z.string(),
+		url: z.string(),
+	})
+	.meta({ id: "CommentMediaUploadResponse" });

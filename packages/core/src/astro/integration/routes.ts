@@ -868,6 +868,11 @@ export function injectCoreRoutes(
 		entrypoint: resolveRoute("api/comments/[collection]/[contentId]/reactions.ts"),
 	});
 
+	injectRoute({
+		pattern: "/_emdash/api/comments/[collection]/[contentId]/media",
+		entrypoint: resolveRoute("api/comments/[collection]/[contentId]/media.ts"),
+	});
+
 	// Comment routes (admin)
 	injectRoute({
 		pattern: "/_emdash/api/admin/comments",

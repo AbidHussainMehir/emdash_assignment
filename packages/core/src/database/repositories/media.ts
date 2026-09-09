@@ -8,6 +8,7 @@ import {
 import { ulid } from "ulidx";
 
 import { normalizeFocalPoint, type FocalPointUpdate } from "../../media/focal-point.js";
+import { chunks, SQL_BATCH_SIZE } from "../../utils/chunks.js";
 import type { Database, MediaRow } from "../types.js";
 import type { FindManyResult } from "./types.js";
 import { encodeCursor, decodeCursor } from "./types.js";
@@ -359,6 +360,19 @@ export class MediaRepository {
 			.executeTakeFirst();
 
 		return row ? this.rowToItem(row) : null;
+	}
+
+	/**
+	 * Find media by IDs. Chunked for D1's bind-parameter limit.
+	 */
+	async findByIds(ids: string[]): Promise<MediaItem[]> {
+		if (ids.length === 0) return [];
+		const items: MediaItem[] = [];
+		for (const chunk of chunks(ids, SQL_BATCH_SIZE)) {
+			const rows = await this.db.selectFrom("media").selectAll().where("id", "in", chunk).execute();
+			for (const row of rows) items.push(this.rowToItem(row));
+		}
+		return items;
 	}
 
 	/**

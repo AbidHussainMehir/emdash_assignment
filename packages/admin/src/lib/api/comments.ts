@@ -34,6 +34,14 @@ export interface AdminComment {
 	moderationMetadata: Record<string, unknown> | null;
 	createdAt: string;
 	updatedAt: string;
+	mediaId?: string | null;
+	media?: {
+		id: string;
+		url: string;
+		width?: number | null;
+		height?: number | null;
+		alt?: string | null;
+	};
 }
 
 export type CommentCounts = Record<CommentStatus, number>;

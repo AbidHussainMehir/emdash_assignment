@@ -460,7 +460,16 @@ function CommentRow({
 					onClick={onRowClick}
 					className="text-start text-sm text-kumo-subtle hover:text-kumo-default line-clamp-2"
 				>
-					{excerpt}
+					<span className="inline-flex items-center gap-2">
+						{comment.media && (
+							<img
+								src={comment.media.url}
+								alt=""
+								className="h-8 w-8 shrink-0 rounded object-cover"
+							/>
+						)}
+						<span className="line-clamp-2">{excerpt}</span>
+					</span>
 				</button>
 			</td>
 			<td className="px-4 py-3">

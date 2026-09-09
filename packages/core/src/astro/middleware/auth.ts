@@ -54,7 +54,7 @@ declare global {
 // Role level constants (matching @emdash-cms/auth)
 const ROLE_ADMIN = 50;
 const MCP_ENDPOINT_PATH = "/_emdash/api/mcp";
-const COMMENT_SUBMISSION_PATH = /^\/_emdash\/api\/comments\/[^/]+\/[^/]+\/?$/;
+const COMMENT_SUBMISSION_PATH = /^\/_emdash\/api\/comments\/[^/]+\/[^/]+(?:\/media)?\/?$/;
 
 function isUnsafeMethod(method: string): boolean {
 	return method !== "GET" && method !== "HEAD" && method !== "OPTIONS";

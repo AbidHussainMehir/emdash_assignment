@@ -74,6 +74,11 @@ describe("core media route injection", () => {
 		);
 	});
 
+	it("registers the public comment media upload route", () => {
+		const patterns = collectRoutePatterns();
+		expect(patterns).toContain("/_emdash/api/comments/[collection]/[contentId]/media");
+	});
+
 	it("registers the pending-media upload route with PUT only", () => {
 		const routes: Array<{ pattern: string; entrypoint: string }> = [];
 		injectCoreRoutes((route) => routes.push(route));

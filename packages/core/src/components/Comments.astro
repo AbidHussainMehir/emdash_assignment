@@ -53,7 +53,7 @@ function autoLinkUrls(text: string): string {
 	return text.replace(
 		URL_RE,
 		(url) =>
-			`<a href="${url}" rel="nofollow ugc noopener" target="_blank">${url}</a>`
+			`<a href="${url}" rel="nofollow ugc noopener" target="_blank">${url}</a>`,
 	);
 }
 
@@ -67,6 +67,12 @@ function escapeHtml(text: string): string {
 
 function formatBody(text: string): string {
 	return autoLinkUrls(escapeHtml(text));
+}
+
+function mediaAlt(comment: PublicComment): string {
+	const alt = comment.media?.alt;
+	if (typeof alt === "string" && alt.trim()) return alt;
+	return "";
 }
 
 // Progressive-enhancement script for reactions. Emitted verbatim (is:inline)
@@ -128,140 +134,174 @@ const REACTION_SCRIPT = `
 {
 	enabled && (
 		<Fragment>
-		<section
-			class:list={["ec-comments", className]}
-			data-ec-comments
-			data-collection={collection}
-			data-content-id={contentId}
-			{...(reactions ? { "data-ec-reactions": "" } : {})}
-		>
-			<h3 class="ec-comments-heading">
-				{total === 0
-					? "No comments yet"
-					: total === 1
-						? "1 Comment"
-						: `${total} Comments`}
-			</h3>
+			<section
+				class:list={["ec-comments", className]}
+				data-ec-comments
+				data-collection={collection}
+				data-content-id={contentId}
+				{...(reactions ? { "data-ec-reactions": "" } : {})}
+			>
+				<h3 class="ec-comments-heading">
+					{total === 0
+						? "No comments yet"
+						: total === 1
+							? "1 Comment"
+							: `${total} Comments`}
+				</h3>
 
-			{items.length > 0 && (
-				<ol class="ec-comments-list">
-					{items.map((comment: PublicComment) => (
-						<li>
-							<article
-								class="ec-comment"
-								id={`comment-${comment.id}`}
-								data-comment-id={comment.id}
-							>
-								<header class="ec-comment-header">
-									<span class="ec-comment-author">
-										{comment.authorName}
-										{comment.isRegisteredUser && (
-											<span class="ec-comment-badge" aria-label="Site member">
-												&#x2713;
-											</span>
-										)}
-									</span>
-									<time class="ec-comment-date" datetime={comment.createdAt}>
-										{new Date(comment.createdAt).toLocaleDateString("en-US", {
-											year: "numeric",
-											month: "long",
-											day: "numeric",
-											hour: "numeric",
-											minute: "2-digit",
-										})}
-									</time>
-								</header>
-								<div
-									class="ec-comment-body"
-									set:html={formatBody(comment.body)}
-								/>
-								{reactions && (
-									<div class="ec-comment-actions">
-										<button
-											type="button"
-											class="ec-reaction"
-											data-ec-reaction="like"
-											data-comment-id={comment.id}
-											aria-pressed="false"
-										>
-											<span class="ec-reaction-icon" aria-hidden="true">
-												&#x2661;
-											</span>
-											<span class="ec-reaction-label">Like</span>
-											<span class="ec-reaction-count" data-ec-reaction-count>
-												{comment.reactions?.like ?? 0}
-											</span>
-										</button>
-									</div>
-								)}
-								{threaded && comment.replies && comment.replies.length > 0 && (
-									<ol class="ec-comment-replies">
-										{comment.replies.map((reply: PublicComment) => (
-											<li>
-												<article
-													class="ec-comment ec-comment-reply"
-													id={`comment-${reply.id}`}
-													data-comment-id={reply.id}
-												>
-													<header class="ec-comment-header">
-														<span class="ec-comment-author">
-															{reply.authorName}
-															{reply.isRegisteredUser && (
-																<span
-																	class="ec-comment-badge"
-																	aria-label="Site member"
-																>
-																	&#x2713;
-																</span>
-															)}
-														</span>
-														<time
-															class="ec-comment-date"
-															datetime={reply.createdAt}
+				{items.length > 0 && (
+					<ol class="ec-comments-list">
+						{items.map((comment: PublicComment) => (
+							<li>
+								<article
+									class="ec-comment"
+									id={`comment-${comment.id}`}
+									data-comment-id={comment.id}
+								>
+									<header class="ec-comment-header">
+										<span class="ec-comment-author">
+											{comment.authorName}
+											{comment.isRegisteredUser && (
+												<span class="ec-comment-badge" aria-label="Site member">
+													&#x2713;
+												</span>
+											)}
+										</span>
+										<time class="ec-comment-date" datetime={comment.createdAt}>
+											{new Date(comment.createdAt).toLocaleDateString("en-US", {
+												year: "numeric",
+												month: "long",
+												day: "numeric",
+												hour: "numeric",
+												minute: "2-digit",
+											})}
+										</time>
+									</header>
+									<div
+										class="ec-comment-body"
+										set:html={formatBody(comment.body)}
+									/>
+									{comment.media && (
+										<figure class="ec-comment-media">
+											<img
+												src={comment.media.url}
+												alt={mediaAlt(comment)}
+												width={comment.media.width ?? undefined}
+												height={comment.media.height ?? undefined}
+												loading="lazy"
+											/>
+										</figure>
+									)}
+									{reactions && (
+										<div class="ec-comment-actions">
+											<button
+												type="button"
+												class="ec-reaction"
+												data-ec-reaction="like"
+												data-comment-id={comment.id}
+												aria-pressed="false"
+											>
+												<span class="ec-reaction-icon" aria-hidden="true">
+													&#x2661;
+												</span>
+												<span class="ec-reaction-label">Like</span>
+												<span class="ec-reaction-count" data-ec-reaction-count>
+													{comment.reactions?.like ?? 0}
+												</span>
+											</button>
+										</div>
+									)}
+									{threaded &&
+										comment.replies &&
+										comment.replies.length > 0 && (
+											<ol class="ec-comment-replies">
+												{comment.replies.map((reply: PublicComment) => (
+													<li>
+														<article
+															class="ec-comment ec-comment-reply"
+															id={`comment-${reply.id}`}
+															data-comment-id={reply.id}
 														>
-															{new Date(reply.createdAt).toLocaleDateString(
-																"en-US",
-																{
-																	year: "numeric",
-																	month: "long",
-																	day: "numeric",
-																	hour: "numeric",
-																	minute: "2-digit",
-																}
+															<header class="ec-comment-header">
+																<span class="ec-comment-author">
+																	{reply.authorName}
+																	{reply.isRegisteredUser && (
+																		<span
+																			class="ec-comment-badge"
+																			aria-label="Site member"
+																		>
+																			&#x2713;
+																		</span>
+																	)}
+																</span>
+																<time
+																	class="ec-comment-date"
+																	datetime={reply.createdAt}
+																>
+																	{new Date(reply.createdAt).toLocaleDateString(
+																		"en-US",
+																		{
+																			year: "numeric",
+																			month: "long",
+																			day: "numeric",
+																			hour: "numeric",
+																			minute: "2-digit",
+																		},
+																	)}
+																</time>
+															</header>
+															<div
+																class="ec-comment-body"
+																set:html={formatBody(reply.body)}
+															/>
+															{reply.media && (
+																<figure class="ec-comment-media">
+																	<img
+																		src={reply.media.url}
+																		alt={mediaAlt(reply)}
+																		width={reply.media.width ?? undefined}
+																		height={reply.media.height ?? undefined}
+																		loading="lazy"
+																	/>
+																</figure>
 															)}
-														</time>
-													</header>
-													<div
-														class="ec-comment-body"
-														set:html={formatBody(reply.body)}
-													/>
-													{reactions && (
-														<div class="ec-comment-actions">
-															<button
-																type="button"
-																class="ec-reaction"
-																data-ec-reaction="like"
-																data-comment-id={reply.id}
-																aria-pressed="false"
-															>
-																<span class="ec-reaction-icon" aria-hidden="true">&#x2661;</span>
-																<span class="ec-reaction-label">Like</span>
-																<span class="ec-reaction-count" data-ec-reaction-count>{reply.reactions?.like ?? 0}</span>
-															</button>
-														</div>
-													)}
-												</article>
-											</li>
-										))}
-									</ol>
-								)}
-							</article>
-						</li>
-					))}
-				</ol>
-			)}
-		</section>
-		{reactions && <script is:inline set:html={REACTION_SCRIPT} />}
+															{reactions && (
+																<div class="ec-comment-actions">
+																	<button
+																		type="button"
+																		class="ec-reaction"
+																		data-ec-reaction="like"
+																		data-comment-id={reply.id}
+																		aria-pressed="false"
+																	>
+																		<span
+																			class="ec-reaction-icon"
+																			aria-hidden="true"
+																		>
+																			&#x2661;
+																		</span>
+																		<span class="ec-reaction-label">Like</span>
+																		<span
+																			class="ec-reaction-count"
+																			data-ec-reaction-count
+																		>
+																			{reply.reactions?.like ?? 0}
+																		</span>
+																	</button>
+																</div>
+															)}
+														</article>
+													</li>
+												))}
+											</ol>
+										)}
+								</article>
+							</li>
+						))}
+					</ol>
+				)}
+			</section>
+			{reactions && <script is:inline set:html={REACTION_SCRIPT} />}
 		</Fragment>
 	)
 }
@@ -327,6 +367,18 @@ const REACTION_SCRIPT = `
 		margin-top: 0.5rem;
 		white-space: pre-wrap;
 		word-break: break-word;
+	}
+
+	.ec-comment-media {
+		margin: 0.75rem 0 0;
+		max-width: 28rem;
+	}
+
+	.ec-comment-media img {
+		display: block;
+		max-width: 100%;
+		height: auto;
+		border-radius: 0.375rem;
 	}
 
 	.ec-comment-actions {

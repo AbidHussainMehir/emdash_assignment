@@ -40,6 +40,7 @@ export interface CommentCreateInput {
 	body: string;
 	ipHash?: string | null;
 	userAgent?: string | null;
+	mediaId?: string | null;
 }
 
 export interface CommentCreateResult {
@@ -101,6 +102,7 @@ export async function createComment(
 			body: input.body,
 			ipHash: input.ipHash ?? null,
 			userAgent: input.userAgent ?? null,
+			mediaId: input.mediaId ?? null,
 		},
 		metadata: {},
 	};
@@ -126,6 +128,16 @@ export async function createComment(
 
 	const decision = await hooks.runModerate(moderateEvent);
 
+	// Untrusted images always wait for a human, even when the text would
+	// otherwise auto-approve (returning commenter / CMS user / moderation none).
+	const hasImage = Boolean(event.comment.mediaId);
+	const status: CommentStatus =
+		hasImage && decision.status === "approved" ? "pending" : decision.status;
+	const resolvedDecision: ModerationDecision =
+		hasImage && decision.status === "approved"
+			? { status: "pending", reason: "Image attachment held for review" }
+			: decision;
+
 	// 5. Save comment with determined status
 	const comment = await repo.create({
 		collection: event.comment.collection,
@@ -135,10 +147,11 @@ export async function createComment(
 		authorEmail: event.comment.authorEmail,
 		authorUserId: event.comment.authorUserId,
 		body: event.comment.body,
-		status: decision.status,
+		status,
 		ipHash: event.comment.ipHash,
 		userAgent: event.comment.userAgent,
 		moderationMetadata: Object.keys(event.metadata).length > 0 ? event.metadata : null,
+		mediaId: event.comment.mediaId ?? null,
 	});
 
 	// 6. Fire comment:afterCreate (fire-and-forget)
@@ -157,7 +170,7 @@ export async function createComment(
 		hooks.fireAfterCreate(afterEvent);
 	}
 
-	return { comment, decision };
+	return { comment, decision: resolvedDecision };
 }
 
 /**
@@ -207,6 +220,7 @@ function commentToStored(comment: Comment): StoredComment {
 		body: comment.body,
 		status: comment.status,
 		moderationMetadata: comment.moderationMetadata,
+		mediaId: comment.mediaId,
 		createdAt: comment.createdAt,
 		updatedAt: comment.updatedAt,
 	};

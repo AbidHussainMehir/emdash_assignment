@@ -13,6 +13,7 @@ import type { PublicComment } from "../database/repositories/comment.js";
 import type { Database } from "../database/types.js";
 import { getDb } from "../loader.js";
 import { cachedQuery, CacheNamespace } from "../object-cache/index.js";
+import { attachCommentMedia } from "./media.js";
 import { reactionScore } from "./ranking.js";
 
 export interface GetCommentsOptions {
@@ -88,6 +89,8 @@ export async function getCommentsWithDb(
 		status: "approved",
 		limit: MAX_COMMENTS,
 	});
+
+	await attachCommentMedia(db, result.items);
 
 	const items: PublicComment[] = options.threaded
 		? CommentRepository.assembleThreads(result.items).map((c) =>

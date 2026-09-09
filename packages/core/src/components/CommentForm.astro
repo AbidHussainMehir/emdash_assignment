@@ -97,6 +97,15 @@ const endpoint = `/_emdash/api/comments/${encodeURIComponent(collection)}/${enco
 				<textarea name="body" required maxlength="5000" rows="4" />
 			</label>
 
+			<label class="ec-comment-form-field">
+				<span>Photo (optional)</span>
+				<input
+					type="file"
+					name="image"
+					accept="image/jpeg,image/png,image/webp"
+				/>
+			</label>
+
 			{parentId && <input type="hidden" name="parentId" value={parentId} />}
 
 			{turnstileSiteKey && (
@@ -116,9 +125,16 @@ const endpoint = `/_emdash/api/comments/${encodeURIComponent(collection)}/${enco
 	)
 }
 
-{enabled && turnstileSiteKey && (
-	<script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-)}
+{
+	enabled && turnstileSiteKey && (
+		<script
+			is:inline
+			src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+			async
+			defer
+		/>
+	)
+}
 
 <script>
 	document.addEventListener("submit", async (e) => {
@@ -134,7 +150,7 @@ const endpoint = `/_emdash/api/comments/${encodeURIComponent(collection)}/${enco
 		if (!endpoint) return;
 
 		const submitBtn = form.querySelector<HTMLButtonElement>(
-			".ec-comment-form-submit"
+			".ec-comment-form-submit",
 		);
 		const statusEl = form.querySelector<HTMLElement>(".ec-comment-form-status");
 		if (!submitBtn || !statusEl) return;
@@ -161,13 +177,41 @@ const endpoint = `/_emdash/api/comments/${encodeURIComponent(collection)}/${enco
 
 		// Get Turnstile token if present
 		const turnstileInput = form.querySelector<HTMLInputElement>(
-			"[name='cf-turnstile-response']"
+			"[name='cf-turnstile-response']",
 		);
 		if (turnstileInput?.value) {
 			body.turnstileToken = turnstileInput.value;
 		}
 
 		try {
+			const imageInput = form.querySelector<HTMLInputElement>(
+				'input[name="image"]',
+			);
+			const imageFile = imageInput?.files?.[0];
+			if (imageFile) {
+				const uploadData = new FormData();
+				uploadData.append("file", imageFile);
+				const honeypot =
+					typeof body.website_url === "string" ? body.website_url : "";
+				if (honeypot) uploadData.append("website_url", honeypot);
+				const uploadRes = await fetch(`${endpoint}/media`, {
+					method: "POST",
+					headers: { "X-EmDash-Request": "1" },
+					body: uploadData,
+				});
+				const uploadResult = await uploadRes.json();
+				if (!uploadRes.ok) {
+					statusEl.textContent =
+						uploadResult.error?.message ||
+						uploadResult.message ||
+						"Failed to upload image.";
+					statusEl.classList.add("ec-comment-form-error");
+					return;
+				}
+				const mediaId = uploadResult.data?.mediaId;
+				if (typeof mediaId === "string") body.mediaId = mediaId;
+			}
+
 			const res = await fetch(endpoint, {
 				method: "POST",
 				headers: {
@@ -184,9 +228,10 @@ const endpoint = `/_emdash/api/comments/${encodeURIComponent(collection)}/${enco
 				statusEl.classList.add("ec-comment-form-success");
 				// Reset form fields (but not disabled pre-filled fields)
 				const textarea = form.querySelector<HTMLTextAreaElement>(
-					"textarea[name='body']"
+					"textarea[name='body']",
 				);
 				if (textarea) textarea.value = "";
+				if (imageInput) imageInput.value = "";
 			} else {
 				statusEl.textContent =
 					result.error?.message ||

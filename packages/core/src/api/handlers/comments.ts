@@ -6,6 +6,7 @@
 
 import type { Kysely } from "kysely";
 
+import { attachCommentMedia } from "../../comments/media.js";
 import { CommentRepository } from "../../database/repositories/comment.js";
 import type { Comment, CommentStatus, PublicComment } from "../../database/repositories/comment.js";
 import { InvalidCursorError } from "../../database/repositories/types.js";
@@ -39,6 +40,7 @@ export async function handleCommentList(
 				status: "approved",
 				limit: MAX_THREADED,
 			});
+			await attachCommentMedia(db, result.items);
 			const threaded = CommentRepository.assembleThreads(result.items);
 			publicItems = threaded.map((c) => CommentRepository.toPublicComment(c));
 			// No cursor for threaded mode — all comments returned at once
@@ -48,6 +50,7 @@ export async function handleCommentList(
 				limit: options.limit,
 				cursor: options.cursor,
 			});
+			await attachCommentMedia(db, result.items);
 			publicItems = result.items.map((c) => CommentRepository.toPublicComment(c));
 			nextCursor = result.nextCursor;
 		}
@@ -102,6 +105,8 @@ export async function handleCommentInbox(
 			limit: options.limit,
 			cursor: options.cursor,
 		});
+
+		await attachCommentMedia(db, result.items);
 
 		return {
 			success: true,
@@ -169,6 +174,8 @@ export async function handleCommentGet(
 				error: { code: "NOT_FOUND", message: `Comment not found: ${id}` },
 			};
 		}
+
+		await attachCommentMedia(db, [comment]);
 
 		return { success: true, data: comment };
 	} catch (error) {

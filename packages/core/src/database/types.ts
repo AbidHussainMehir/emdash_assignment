@@ -599,6 +599,7 @@ export interface CommentTable {
 	ip_hash: string | null;
 	user_agent: string | null;
 	moderation_metadata: string | null; // JSON
+	media_id: string | null;
 	created_at: Generated<string>;
 	updated_at: Generated<string>;
 }

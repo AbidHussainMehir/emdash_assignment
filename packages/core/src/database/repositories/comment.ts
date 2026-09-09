@@ -1,6 +1,7 @@
 import { sql, type ExpressionBuilder, type Kysely } from "kysely";
 import { ulid } from "ulidx";
 
+import type { CommentMedia } from "../../comments/media.js";
 import { invalidateCommentObjectCache } from "../../object-cache/index.js";
 import type { Database } from "../types.js";
 import { encodeCursor, decodeCursor, type FindManyResult } from "./types.js";
@@ -27,6 +28,9 @@ export interface Comment {
 	ipHash: string | null;
 	userAgent: string | null;
 	moderationMetadata: Record<string, unknown> | null;
+	mediaId: string | null;
+	/** Resolved attachment; populated by attachCommentMedia when listing. */
+	media?: CommentMedia;
 	createdAt: string;
 	updatedAt: string;
 }
@@ -42,6 +46,8 @@ export interface PublicComment {
 	replies?: PublicComment[];
 	/** Aggregate reaction counts (`{ like: 12 }`), attached when requested. */
 	reactions?: Record<string, number>;
+	/** Public image attachment, when the comment has one. */
+	media?: CommentMedia;
 }
 
 export interface CreateCommentInput {
@@ -56,6 +62,7 @@ export interface CreateCommentInput {
 	ipHash?: string | null;
 	userAgent?: string | null;
 	moderationMetadata?: Record<string, unknown> | null;
+	mediaId?: string | null;
 }
 
 export interface CommentFindOptions {
@@ -97,6 +104,7 @@ export class CommentRepository {
 				moderation_metadata: input.moderationMetadata
 					? JSON.stringify(input.moderationMetadata)
 					: null,
+				media_id: input.mediaId ?? null,
 				created_at: now,
 				updated_at: now,
 			})
@@ -435,6 +443,8 @@ export class CommentRepository {
 			createdAt: comment.createdAt,
 		};
 
+		if (comment.media) pub.media = comment.media;
+
 		if (comment._replies && comment._replies.length > 0) {
 			pub.replies = comment._replies.map((r) => CommentRepository.toPublicComment(r));
 		}
@@ -457,6 +467,7 @@ export class CommentRepository {
 			ipHash: row.ip_hash,
 			userAgent: row.user_agent,
 			moderationMetadata: row.moderation_metadata ? safeJsonParse(row.moderation_metadata) : null,
+			mediaId: row.media_id ?? null,
 			createdAt: row.created_at,
 			updatedAt: row.updated_at,
 		};

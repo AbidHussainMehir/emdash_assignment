@@ -95,6 +95,17 @@ export function CommentDetail({
 							{t`Comment`}
 						</h3>
 						<p className="text-sm whitespace-pre-wrap break-words">{comment.body}</p>
+						{comment.media && (
+							<figure className="mt-3">
+								<img
+									src={comment.media.url}
+									alt={comment.media.alt ?? ""}
+									width={comment.media.width ?? undefined}
+									height={comment.media.height ?? undefined}
+									className="max-h-64 w-auto rounded-md border"
+								/>
+							</figure>
+						)}
 					</div>
 
 					{/* Content reference */}

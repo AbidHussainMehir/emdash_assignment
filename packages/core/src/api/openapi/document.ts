@@ -15,6 +15,7 @@ import {
 	commentBulkResponseSchema,
 	commentCountsResponseSchema,
 	commentListQuery,
+	commentMediaUploadResponseSchema,
 	commentSchema,
 	commentStatusBody,
 	createCommentBody,
@@ -1509,6 +1510,30 @@ const commentsPaths = {
 					},
 				},
 				...standardErrors(400, 429, 500),
+			},
+		},
+	},
+	"/_emdash/api/comments/{collection}/{contentId}/media": {
+		post: {
+			operationId: "uploadCommentMedia",
+			summary: "Upload a JPEG, PNG, or WebP image to attach to a comment",
+			description:
+				"Public endpoint. Returns a mediaId to include on the subsequent comment create request. Images are held for moderation with the comment.",
+			tags: ["Comments"],
+			requestParams: {
+				path: z.object({
+					collection: z.string().meta({ description: "Collection slug" }),
+					contentId: z.string().meta({ description: "Content ID" }),
+				}),
+			},
+			responses: {
+				"200": {
+					description: "Uploaded image",
+					content: {
+						[JSON_CONTENT]: { schema: successEnvelope(commentMediaUploadResponseSchema) },
+					},
+				},
+				...standardErrors(400, 413, 429, 500),
 			},
 		},
 	},
