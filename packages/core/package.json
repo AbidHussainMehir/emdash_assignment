@@ -185,6 +185,14 @@
     "./plugins/adapt-sandbox-entry": {
       "types": "./dist/plugins/adapt-sandbox-entry.d.mts",
       "default": "./dist/plugins/adapt-sandbox-entry.mjs"
+    },
+    "./plugins/sandbox/noop": {
+      "types": "./dist/plugins/sandbox/noop.d.mts",
+      "default": "./dist/plugins/sandbox/noop.mjs"
+    },
+    "./plugins/scheduler/node": {
+      "types": "./dist/plugins/scheduler/node.d.mts",
+      "default": "./dist/plugins/scheduler/node.mjs"
     }
   },
   "imports": {

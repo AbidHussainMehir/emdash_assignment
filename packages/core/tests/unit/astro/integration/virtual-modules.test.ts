@@ -109,7 +109,7 @@ describe("generateSchedulerModule", () => {
 		// No Cron Trigger fires in `astro dev`, so scheduled publishing/cron
 		// must still run via the in-process timer.
 		const out = generateSchedulerModule("@astrojs/cloudflare", "serve");
-		expect(out).toContain('import { NodeCronScheduler } from "emdash"');
+		expect(out).toContain('import { NodeCronScheduler } from "emdash/plugins/scheduler/node"');
 		expect(out).toContain("export function createScheduler(executor)");
 		expect(out).not.toContain("createScheduler = null");
 	});
@@ -117,7 +117,7 @@ describe("generateSchedulerModule", () => {
 	it("emits a NodeCronScheduler factory for non-Cloudflare adapters", () => {
 		for (const cmd of ["build", "serve", undefined] as const) {
 			const out = generateSchedulerModule("@astrojs/node", cmd);
-			expect(out).toContain('import { NodeCronScheduler } from "emdash"');
+			expect(out).toContain('import { NodeCronScheduler } from "emdash/plugins/scheduler/node"');
 			expect(out).not.toContain("createScheduler = null");
 		}
 	});
@@ -180,7 +180,7 @@ describe("createVirtualModulesPlugin scheduler wiring", () => {
 		callHook(plugin.configResolved, { command: "build" });
 
 		const out = callHook<string>(plugin.load, RESOLVED_VIRTUAL_SCHEDULER_ID);
-		expect(out).toContain('import { NodeCronScheduler } from "emdash"');
+		expect(out).toContain('import { NodeCronScheduler } from "emdash/plugins/scheduler/node"');
 		expect(out).not.toContain("createScheduler = null");
 	});
 

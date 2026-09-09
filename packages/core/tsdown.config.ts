@@ -125,6 +125,11 @@ export default defineConfig({
 		"src/plugin-types.ts",
 		// Standard plugin adapter (loaded by virtual:emdash/plugins at runtime)
 		"src/plugins/adapt-sandbox-entry.ts",
+		// Lightweight subpaths for virtual modules — avoid importing the full
+		// emdash barrel (index.mjs) from Vite-generated modules, which breaks
+		// SSR resolution on Windows when noExternal follows the realpath.
+		"src/plugins/sandbox/noop.ts",
+		"src/plugins/scheduler/node.ts",
 		// Public source-exported subpaths -- compiled so consumers never
 		// type-check our raw .ts (avoids the dual-package identity hazard).
 		// `./ui`, `./ui/search` and the `*-admin.tsx` providers stay source:

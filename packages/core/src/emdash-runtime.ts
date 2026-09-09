@@ -1111,15 +1111,13 @@ export class EmDashRuntime {
 				}
 
 				try {
-					const dataUrl = `data:text/javascript;base64,${Buffer.from(bundle.backendCode).toString("base64")}`;
 					// Dynamic data: import returns `any` from a base64-encoded module.
 					// We trust the bundle to be shaped like a plugin (built by plugin-cli);
 					// adaptSandboxEntry then validates fields it cares about.
 					// eslint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- dynamic module from trusted bundle
-					const pluginModule = (await import(/* @vite-ignore */ dataUrl)) as Record<
-						string,
-						unknown
-					>;
+					const pluginModule = (await import(
+						/* @vite-ignore */ `data:text/javascript;base64,${Buffer.from(bundle.backendCode).toString("base64")}`
+					)) as Record<string, unknown>;
 					const pluginDef = (pluginModule.default ?? pluginModule) as Parameters<
 						typeof adaptSandboxEntry
 					>[0];
@@ -1944,9 +1942,10 @@ export class EmDashRuntime {
 		const plugins: ResolvedPlugin[] = [];
 		for (const entry of entries) {
 			try {
-				const dataUrl = `data:text/javascript;base64,${Buffer.from(entry.code).toString("base64")}`;
 				// eslint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- dynamic module from trusted bundle (built by plugin-cli); adaptSandboxEntry validates required fields.
-				const pluginModule = (await import(/* @vite-ignore */ dataUrl)) as Record<string, unknown>;
+				const pluginModule = (await import(
+					/* @vite-ignore */ `data:text/javascript;base64,${Buffer.from(entry.code).toString("base64")}`
+				)) as Record<string, unknown>;
 				const pluginDef = (pluginModule.default ?? pluginModule) as Parameters<
 					typeof adaptSandboxEntry
 				>[0];
@@ -2303,12 +2302,10 @@ export class EmDashRuntime {
 					}
 
 					// Evaluate the bundled ESM and adapt it as a trusted plugin
-					const dataUrl = `data:text/javascript;base64,${Buffer.from(bundle.backendCode).toString("base64")}`;
 					// eslint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- dynamic module from trusted bundle (built by plugin-cli); adaptSandboxEntry validates required fields.
-					const pluginModule = (await import(/* @vite-ignore */ dataUrl)) as Record<
-						string,
-						unknown
-					>;
+					const pluginModule = (await import(
+						/* @vite-ignore */ `data:text/javascript;base64,${Buffer.from(bundle.backendCode).toString("base64")}`
+					)) as Record<string, unknown>;
 					const pluginDef = (pluginModule.default ?? pluginModule) as Parameters<
 						typeof adaptSandboxEntry
 					>[0];

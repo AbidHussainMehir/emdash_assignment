@@ -8,7 +8,7 @@
 import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath ,pathToFileURL} from "node:url";
 
 import type { AstroConfig } from "astro";
 import type { Plugin } from "vite";
@@ -79,7 +79,11 @@ const LOCALE_MESSAGES_RE = /[/\\]([a-z]{2}(?:-[A-Z]{2})?)[/\\]messages\.mjs$/;
 function linguiMacroPlugin(adminSourcePath: string, adminDistPath: string): Plugin {
 	// Resolve @babel/core from admin's devDependencies, not core's.
 	const adminRequire = createRequire(resolve(adminDistPath, "index.js"));
-	const babelCorePath = adminRequire.resolve("@babel/core");
+	// const babelCorePath = adminRequire.resolve("@babel/core");
+	const babelCorePath = pathToFileURL(adminRequire.resolve("@babel/core")).href;
+	const normalizedSource = adminSourcePath.replace(/\\/g, "/");
+	const isAdminSource = (p: string | undefined) =>
+		p !== undefined && p.replace(/\\/g, "/").startsWith(normalizedSource);
 
 	return {
 		name: "emdash-lingui-macro",
@@ -88,14 +92,17 @@ function linguiMacroPlugin(adminSourcePath: string, adminDistPath: string): Plug
 			// Redirect relative locale catalog imports (e.g. ./de/messages.mjs) from
 			// within admin source to the compiled dist/locales/ directory, since
 			// lingui compile only runs during build — not in dev watch mode.
-			if (!importer?.startsWith(adminSourcePath)) return;
+			if (!isAdminSource(importer)) return;
+
+			// if (!importer?.startsWith(adminSourcePath)) return;
 			const match = id.match(LOCALE_MESSAGES_RE);
 			if (match?.[1]) {
 				return resolve(adminDistPath, "locales", match[1], "messages.mjs");
 			}
 		},
 		async transform(code, id) {
-			if (!id.startsWith(adminSourcePath) || !code.includes("@lingui")) return;
+			// if (!id.startsWith(adminSourcePath) || !code.includes("@lingui")) return;
+			if (!isAdminSource(id) || !code.includes("@lingui")) return;
 			const { transformAsync } = (await import(babelCorePath)) as typeof import("@babel/core");
 			const result = await transformAsync(code, {
 				filename: id,

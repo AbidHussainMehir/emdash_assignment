@@ -369,7 +369,7 @@ export function generateSandboxRunnerModule(sandboxRunner?: string, sandbox?: bo
 		// No sandbox runner configured - sandboxed plugins disabled
 		return `
 // No sandbox runner configured - sandboxed plugins disabled
-import { createNoopSandboxRunner } from "emdash";
+import { createNoopSandboxRunner } from "emdash/plugins/sandbox/noop";
 
 export const createSandboxRunner = createNoopSandboxRunner;
 export const sandboxEnabled = false;
@@ -381,7 +381,7 @@ export const sandboxEnabled = false;
 		// (no isolation, for debugging)
 		return `
 // Sandbox explicitly disabled (sandbox: false) - plugins run in-process
-import { createNoopSandboxRunner } from "emdash";
+import { createNoopSandboxRunner } from "emdash/plugins/sandbox/noop";
 
 export const createSandboxRunner = createNoopSandboxRunner;
 export const sandboxEnabled = true;
@@ -549,7 +549,7 @@ export const createScheduler = null;
 `;
 	}
 	return `// Long-lived runtime (or local dev): drive scheduled work from an in-process timer.
-import { NodeCronScheduler } from "emdash";
+import { NodeCronScheduler } from "emdash/plugins/scheduler/node";
 
 export function createScheduler(executor) {
 	return new NodeCronScheduler(executor);
